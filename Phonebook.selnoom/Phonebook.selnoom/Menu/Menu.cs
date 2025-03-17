@@ -1,7 +1,7 @@
 ﻿using Phonebook.selnoom.Data;
 using Phonebook.selnoom.Models;
 using Spectre.Console;
-using System.Diagnostics.Contracts;
+using Phonebook.selnoom.Helper;
 
 namespace Phonebook.selnoom.Menu;
 
@@ -87,10 +87,10 @@ public class Menu
         string name = AnsiConsole.Prompt(new TextPrompt<string>("Please enter the contact [green]name[/] or [blue]0[/] to return:").AllowEmpty());
         if (name == "0") return;
 
-        string phoneNumber = AnsiConsole.Ask<string>("Please enter the contact [green]phone number (required!)[/] or [blue]0[/] to return:");
+        string phoneNumber = Validation.GetValidatedPhoneNumber();
         if (phoneNumber == "0") return;
 
-        string email = AnsiConsole.Prompt(new TextPrompt<string>("Please enter the contact [green]email[/] or [blue]0[/] to return:").AllowEmpty());
+        string email = Validation.GetValidatedEmail();
         if (email == "0") return;
 
         int? categoryId = null;
@@ -139,16 +139,10 @@ public class Menu
         );
         if (newName == "0") return;
 
-        var newEmail = AnsiConsole.Prompt(
-            new TextPrompt<string>("Enter new [green]email[/] (leave empty to keep current, type 0 to cancel):")
-                .AllowEmpty()
-        );
+        var newEmail = Validation.GetValidatedEmail();
         if (newEmail == "0") return;
 
-        var newPhoneNumber = AnsiConsole.Prompt(
-            new TextPrompt<string>("Enter new [green]phone number[/] (leave empty to keep current, type 0 to cancel):")
-                .AllowEmpty()
-        );
+        var newPhoneNumber = Validation.GetValidatedPhoneNumber();
         if (newPhoneNumber == "0") return;
 
         newName = string.IsNullOrWhiteSpace(newName) ? selectedContact.Name : newName;
