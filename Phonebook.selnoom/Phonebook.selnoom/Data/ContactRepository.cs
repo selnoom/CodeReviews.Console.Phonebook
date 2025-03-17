@@ -14,17 +14,6 @@ public class ContactRepository
     {
         return await _dbContext.Contacts.ToListAsync();
     }
-    public async Task CreateContact(string? name, string? email, string phoneNumber)
-    {
-        Contact contact = new Contact
-        {
-            Name = name,
-            Email = email,
-            PhoneNumber = phoneNumber
-        };
-        await _dbContext.Contacts.AddAsync(contact);
-        await _dbContext.SaveChangesAsync();
-    }
 
     public async Task CreateContact(string? name, string? email, string phoneNumber, int? categoryId = null)
     {
