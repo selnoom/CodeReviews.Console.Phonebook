@@ -43,9 +43,9 @@ public class AppDbContext : DbContext
             entity.HasIndex(c => c.PhoneNumber)
                 .IsUnique();
             entity.HasOne(c => c.Category)
-                .WithMany(c => c.Contacts)  
+                .WithMany(c => c.Contacts)
                 .HasForeignKey(c => c.CategoryId)
-                .OnDelete(DeleteBehavior.Restrict);
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

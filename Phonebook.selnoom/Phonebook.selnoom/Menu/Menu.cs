@@ -2,6 +2,7 @@
 using Phonebook.selnoom.Models;
 using Spectre.Console;
 using Phonebook.selnoom.Helper;
+using Phonebook.selnoom.Sms;
 
 namespace Phonebook.selnoom.Menu;
 
@@ -9,11 +10,13 @@ public class Menu
 {
     private readonly ContactRepository _contactRepository;
     private readonly CategoryRepository _categoryRepository;
+    private readonly SmsService _smsService;
 
-    public Menu(ContactRepository contactRepository, CategoryRepository categoryRepository)
+    public Menu(ContactRepository contactRepository, CategoryRepository categoryRepository, SmsService smsService)
     {
         _contactRepository = contactRepository;
         _categoryRepository = categoryRepository;
+        _smsService = smsService;
     }
 
     public async Task ShowMenu()
@@ -38,6 +41,9 @@ public class Menu
                     break;
                 case MainMenuChoices.Email:
                     await SendEmailMenu();
+                    break;
+                case MainMenuChoices.SMS:
+                    await SendSMSMenu();
                     break;
                 case MainMenuChoices.Exit:
                     return;
@@ -491,6 +497,12 @@ public class Menu
                 break;
             case "Categories":
                 List<Category> categories = await _categoryRepository.GetCategories();
+                if (!categories.Any())
+                {
+                    AnsiConsole.MarkupLine("[red]No categories saved![/]");
+                    AnsiConsole.Prompt(new TextPrompt<string>("\nPress Enter to continue...").AllowEmpty());
+                    return;
+                }
                 Category? category = ChooseCategory(categories);
                 Contact? categoryContact = await ChooseContactByCategory(category.Id);
                 SendEmailToContact(categoryContact);
@@ -521,6 +533,50 @@ public class Menu
         Email.SendEmailToContact(contact.Email, subject, message);
 
         AnsiConsole.MarkupLine("[green]Success![/]");
+        AnsiConsole.Prompt(new TextPrompt<string>("\nPress Enter to continue...").AllowEmpty());
+    }
+
+    public async Task SendSMSMenu()
+    {
+        string choice = AnsiConsole.Prompt(
+            new SelectionPrompt<string>()
+                .Title("Would you like to view all contacts or select a category?")
+                .AddChoices("Contacts", "Categories", "Exit")
+        );
+
+        switch (choice)
+        {
+            case "Contacts":
+                Contact? contact = await ChooseContact();
+                SendSMStoContact(contact);
+                break;
+            case "Categories":
+                List<Category> categories = await _categoryRepository.GetCategories();
+                if (!categories.Any())
+                {
+                    AnsiConsole.MarkupLine("[red]No categories saved![/]");
+                    AnsiConsole.Prompt(new TextPrompt<string>("\nPress Enter to continue...").AllowEmpty());
+                    return;
+                }
+                Category? category = ChooseCategory(categories);
+                Contact? categoryContact = await ChooseContactByCategory(category.Id);
+                SendSMStoContact(categoryContact);
+                break;
+            case "Exit":
+                return;
+            default:
+                break;
+        }
+    }
+
+    public void SendSMStoContact(Contact contact)
+    {
+        AnsiConsole.Clear();
+        string message = AnsiConsole.Prompt(new TextPrompt<string>("Please enter the [green]message[/] of your SMS or [blue]0[/] to return:"));
+        if (message == "0") return;
+
+        _smsService.SendSms(contact.PhoneNumber, message);
+
         AnsiConsole.Prompt(new TextPrompt<string>("\nPress Enter to continue...").AllowEmpty());
     }
 }
