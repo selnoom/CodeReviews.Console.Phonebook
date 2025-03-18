@@ -21,7 +21,7 @@ public class SmsService
 
     public virtual void SendSms(string toNumber, string message)
     {
-        var msg = MessageResource.Create(
+        MessageResource.Create(
             body: message,
             from: new PhoneNumber(_fromNumber),
             to: new PhoneNumber("+55" + toNumber)
