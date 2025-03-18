@@ -43,7 +43,7 @@ public class Menu
                     await SendEmailMenu();
                     break;
                 case MainMenuChoices.SMS:
-                    await SendSMSMenu();
+                    await SendSmsMenu();
                     break;
                 case MainMenuChoices.Exit:
                     return;
@@ -536,7 +536,7 @@ public class Menu
         AnsiConsole.Prompt(new TextPrompt<string>("\nPress Enter to continue...").AllowEmpty());
     }
 
-    public async Task SendSMSMenu()
+    public async Task SendSmsMenu()
     {
         string choice = AnsiConsole.Prompt(
             new SelectionPrompt<string>()
@@ -548,7 +548,7 @@ public class Menu
         {
             case "Contacts":
                 Contact? contact = await ChooseContact();
-                SendSMStoContact(contact);
+                SendSmsToContact(contact);
                 break;
             case "Categories":
                 List<Category> categories = await _categoryRepository.GetCategories();
@@ -560,7 +560,7 @@ public class Menu
                 }
                 Category? category = ChooseCategory(categories);
                 Contact? categoryContact = await ChooseContactByCategory(category.Id);
-                SendSMStoContact(categoryContact);
+                SendSmsToContact(categoryContact);
                 break;
             case "Exit":
                 return;
@@ -569,7 +569,7 @@ public class Menu
         }
     }
 
-    public void SendSMStoContact(Contact contact)
+    public void SendSmsToContact(Contact contact)
     {
         AnsiConsole.Clear();
         string message = AnsiConsole.Prompt(new TextPrompt<string>("Please enter the [green]message[/] of your SMS or [blue]0[/] to return:"));
