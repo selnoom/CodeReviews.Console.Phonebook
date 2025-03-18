@@ -4,6 +4,8 @@ public enum MainMenuChoices
 {
     Contacts,
     Categories,
+    Email,
+    SMS,
     Exit
 }
 

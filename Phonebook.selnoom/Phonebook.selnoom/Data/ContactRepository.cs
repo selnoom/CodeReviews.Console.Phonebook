@@ -15,6 +15,13 @@ public class ContactRepository
         return await _dbContext.Contacts.ToListAsync();
     }
 
+    public async Task<List<Contact>> GetContactsByCategoryId(int categoryId)
+    {
+        return await _dbContext.Contacts
+            .Where(c => c.CategoryId == categoryId)
+            .ToListAsync();
+    }
+
     public async Task CreateContact(string? name, string? email, string phoneNumber, int? categoryId = null)
     {
         Contact contact = new Contact

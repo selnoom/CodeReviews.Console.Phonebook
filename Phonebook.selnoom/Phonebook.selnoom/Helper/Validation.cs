@@ -3,26 +3,38 @@ using System.Text.RegularExpressions;
 
 namespace Phonebook.selnoom.Helper;
 
-public class Validation
+public static class Validation
 {
-    public string GetValidatedPhoneNumber()
+    public static string GetValidatedPhoneNumber(List<string> existingPhoneNumbers)
     {
-        string phoneNumber = AnsiConsole.Prompt(
-            new TextPrompt<string>("Please enter the contact [green]phone number (required!)[/] or [blue]0[/] to return:")
-        );
-
-        while (phoneNumber != "0" && (phoneNumber.Length != 11 || !phoneNumber.All(char.IsDigit)))
+        while (true)
         {
-            AnsiConsole.MarkupLine("[red]Phone number must be exactly 11 digits and contain only numbers.[/]");
-            phoneNumber = AnsiConsole.Prompt(
+            string phoneNumber = AnsiConsole.Prompt(
                 new TextPrompt<string>("Please enter the contact [green]phone number (required!)[/] or [blue]0[/] to return:")
             );
-        }
 
-        return phoneNumber;
+            if (phoneNumber == "0")
+            {
+                return phoneNumber;
+            }
+
+            if (phoneNumber.Length != 11 || !phoneNumber.All(char.IsDigit))
+            {
+                AnsiConsole.MarkupLine("[red]Phone number must be exactly 11 digits and contain only numbers.[/]");
+                continue;
+            }
+
+            if (existingPhoneNumbers.Contains(phoneNumber))
+            {
+                AnsiConsole.MarkupLine("[red]This phone number already exists. Please enter a different one.[/]");
+                continue;
+            }
+
+            return phoneNumber;
+        }
     }
 
-    public string GetValidatedEmail()
+    public static string GetValidatedEmail()
     {
         string email = AnsiConsole.Prompt(
             new TextPrompt<string>("Please enter the contact [green]email[/] or [blue]0[/] to return:")

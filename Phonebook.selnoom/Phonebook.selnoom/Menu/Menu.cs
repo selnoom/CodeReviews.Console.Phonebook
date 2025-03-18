@@ -36,6 +36,9 @@ public class Menu
                 case MainMenuChoices.Categories:
                     await ShowCategoryMenu();
                     break;
+                case MainMenuChoices.Email:
+                    await SendEmailMenu();
+                    break;
                 case MainMenuChoices.Exit:
                     return;
                 default:
@@ -63,13 +66,13 @@ public class Menu
         switch (contactChoice)
         {
             case SubMenuChoices.Create:
-                await CreateContact();
+                await CreateContact(contacts);
                 break;
             case SubMenuChoices.View:
                 await ViewContacts();
                 break;
             case SubMenuChoices.Edit:
-                await UpdateContact();
+                await UpdateContact(contacts);
                 break;
             case SubMenuChoices.Delete:
                 await DeleteContact();
@@ -80,14 +83,15 @@ public class Menu
                 break;
         }
     }
-    public async Task CreateContact()
+    public async Task CreateContact(List<Contact> contacts)
     {
         AnsiConsole.Clear();
 
         string name = AnsiConsole.Prompt(new TextPrompt<string>("Please enter the contact [green]name[/] or [blue]0[/] to return:").AllowEmpty());
         if (name == "0") return;
 
-        string phoneNumber = Validation.GetValidatedPhoneNumber();
+        List<string> phoneNumbers = contacts.Select(x => x.PhoneNumber).ToList();
+        string phoneNumber = Validation.GetValidatedPhoneNumber(phoneNumbers);
         if (phoneNumber == "0") return;
 
         string email = Validation.GetValidatedEmail();
@@ -124,9 +128,9 @@ public class Menu
         AnsiConsole.Prompt(new TextPrompt<string>("\nPress Enter to continue...").AllowEmpty());
     }
 
-    public async Task UpdateContact()
+    public async Task UpdateContact(List<Contact> contacts)
     {
-        Contact selectedContact = await ChooseContact();
+        Contact? selectedContact = await ChooseContact();
         if (selectedContact == null)
         {
             AnsiConsole.Prompt(new TextPrompt<string>("Press Enter to continue...").AllowEmpty());
@@ -142,7 +146,8 @@ public class Menu
         var newEmail = Validation.GetValidatedEmail();
         if (newEmail == "0") return;
 
-        var newPhoneNumber = Validation.GetValidatedPhoneNumber();
+        List<string> phoneNumbers = contacts.Select(x => x.PhoneNumber).ToList();
+        var newPhoneNumber = Validation.GetValidatedPhoneNumber(phoneNumbers);
         if (newPhoneNumber == "0") return;
 
         newName = string.IsNullOrWhiteSpace(newName) ? selectedContact.Name : newName;
@@ -175,7 +180,7 @@ public class Menu
 
     public async Task DeleteContact()
     {
-        Contact selectedContact = await ChooseContact();
+        Contact? selectedContact = await ChooseContact();
         if (selectedContact == null)
         {
             AnsiConsole.Prompt(new TextPrompt<string>("Press Enter to continue...").AllowEmpty());
@@ -230,7 +235,7 @@ public class Menu
         }
 
         int selectedId = int.Parse(selectedContactStr.Split('-')[0].Trim());
-        Contact selectedContact = contacts.FirstOrDefault(c => c.Id == selectedId);
+        Contact? selectedContact = contacts.FirstOrDefault(c => c.Id == selectedId);
         if (selectedContact == null)
         {
             AnsiConsole.MarkupLine("[red]Contact not found![/]");
@@ -239,6 +244,35 @@ public class Menu
 
         return selectedContact;
     }
+
+    public async Task<Contact?> ChooseContactByCategory(int categoryId)
+    {
+        AnsiConsole.Clear();
+
+        List<Contact> contacts = await _contactRepository.GetContactsByCategoryId(categoryId);
+        if (contacts.Count == 0)
+        {
+            AnsiConsole.MarkupLine("[red]No contacts found in this category![/]");
+            return null;
+        }
+
+        var selectedContactStr = ShowContactChoices(contacts);
+        if (selectedContactStr == "Return to Menu")
+        {
+            return null;
+        }
+
+        int selectedId = int.Parse(selectedContactStr.Split('-')[0].Trim());
+        Contact? selectedContact = contacts.FirstOrDefault(c => c.Id == selectedId);
+        if (selectedContact == null)
+        {
+            AnsiConsole.MarkupLine("[red]Contact not found![/]");
+            return null;
+        }
+
+        return selectedContact;
+    }
+
 
     public async Task ShowCategoryMenu()
     {
@@ -286,12 +320,28 @@ public class Menu
 
     public async Task ViewCategories()
     {
-        List<Category> categories = await ShowCategories();
+        List<Category>? categories = await ShowCategories();
         if (!categories.Any())
         {
             AnsiConsole.MarkupLine("[red]No categories saved![/]");
         }
-        AnsiConsole.Prompt(new TextPrompt<string>("Press Enter to continue...").AllowEmpty());
+
+        string choice = AnsiConsole.Prompt(
+            new SelectionPrompt<string>()
+                .Title("Would you like to view the contacts of a category?")
+                .AddChoices("Yes", "No")
+        );
+
+        switch (choice)
+        {
+            case "Yes":
+                await ShowContactsInCateogry(categories);
+                break;
+            case "No":
+                return;
+            default:
+                break;
+        }
     }
 
     public async Task UpdateCategory()
@@ -335,7 +385,7 @@ public class Menu
             return;
         }
 
-        Category category = ChooseCategory(categories);
+        Category? category = ChooseCategory(categories);
         if (category == null)
         {
             return;
@@ -344,6 +394,20 @@ public class Menu
         await _categoryRepository.DeleteCategory(category.Id);
 
         AnsiConsole.MarkupLine("[green]Category deleted successfully![/]");
+        AnsiConsole.Prompt(new TextPrompt<string>("\nPress Enter to continue...").AllowEmpty());
+    }
+
+    public async Task ShowContactsInCateogry(List<Category> categories)
+    {
+        AnsiConsole.Clear();
+        Category? category = ChooseCategory(categories);
+        if (category == null)
+        {
+            return;
+        }
+
+        List<Contact> contacts = await _contactRepository.GetContactsByCategoryId(category.Id);
+        ShowContacts(contacts);
         AnsiConsole.Prompt(new TextPrompt<string>("\nPress Enter to continue...").AllowEmpty());
     }
 
@@ -409,5 +473,54 @@ public class Menu
         {
             return categories.FirstOrDefault(c => c.Name == selectedCategory);
         }
+    }
+
+    public async Task SendEmailMenu()
+    {
+        string choice = AnsiConsole.Prompt(
+            new SelectionPrompt<string>()
+                .Title("Would you like to view all contacts or select a category?")
+                .AddChoices("Contacts", "Categories", "Exit")
+        );
+
+        switch (choice)
+        {
+            case "Contacts":
+                Contact? contact = await ChooseContact();
+                SendEmailToContact(contact);
+                break;
+            case "Categories":
+                List<Category> categories = await _categoryRepository.GetCategories();
+                Category? category = ChooseCategory(categories);
+                Contact? categoryContact = await ChooseContactByCategory(category.Id);
+                SendEmailToContact(categoryContact);
+                break;
+            case "Exit":
+                return;
+            default:
+                break;
+        }
+    }
+
+    public void SendEmailToContact(Contact contact)
+    {
+        AnsiConsole.Clear();
+        if (contact.Email == null)
+        {
+            AnsiConsole.MarkupLine("[red]No categories saved![/]");
+            AnsiConsole.Prompt(new TextPrompt<string>("\nPress Enter to continue...").AllowEmpty());
+            return;
+        }
+
+        string subject = AnsiConsole.Prompt(new TextPrompt<string>("Please enter the [green]subject[/] of your email or [blue]0[/] to return:"));
+        if (subject == "0") return;
+
+        string message = AnsiConsole.Prompt(new TextPrompt<string>("Please enter the [green]message[/] of your email or [blue]0[/] to return:"));
+        if (message == "0") return;
+
+        Email.SendEmailToContact(contact.Email, subject, message);
+
+        AnsiConsole.MarkupLine("[green]Success![/]");
+        AnsiConsole.Prompt(new TextPrompt<string>("\nPress Enter to continue...").AllowEmpty());
     }
 }
